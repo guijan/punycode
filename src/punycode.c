@@ -15,9 +15,8 @@
  */
 
 /*
- * This punycode implementation features code copypasted from the sample
- * punycode-sample.c 2.0.0 written by Adam M. Costello. Specifically, it was
- * taken from:
+ * This punycode implementation features code from punycode-sample.c 2.0.0
+ * written by Adam M. Costello. Specifically, it was taken from:
  * http://www.nicemice.net/idn/punycode-spec.gz
  * SHA256: 693158e1c1ada679c4cc9d72f48527a4490bb24ae81c3869a54889a0fdd58b0c
  *

@@ -1,0 +1,95 @@
+.\"	$OpenBSD: mdoc.template,v 1.15 2014/03/31 00:09:54 dlg Exp $
+.\"
+.\" Copyright (c) 2023 Guilherme Janczak <guilherme.janczak@yandex.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.\" The following requests are required for all man pages.
+.\"
+.\" Remove `\&' from the line below.
+.Dd $Mdocdate: January 9 2023 $
+.Dt PUNYENC 3
+.Os
+.Sh NAME
+.Nm punyenc
+.Nd punycode encoder
+.Sh SYNOPSIS
+.In punycode.h
+.Ft size_t
+.Fn punyenc "char *dst" "const char *src" "size_t dstsize"
+.Sh DESCRIPTION
+The
+.Fn punyenc
+function encodes the UTF-8 string in
+.Fa src
+to US-ASCII punycode,
+and stores it in the buffer
+.Fa dst
+of size
+.Fa dstsize .
+.Pp
+.Fn punyenc
+guarantees '\\0' termination if
+.Fa dstsize
+isn't 0, and truncates the resulting string to fit into
+.Fa dstsize
+bytes if necessary.
+.Pp
+This interface is modeled after
+.Fn strlcpy
+and has the same type and almost the same usage,
+it differs only by having an error return value.
+.Sh RETURN VALUES
+If there is an irrecoverable encoding error,
+(size_t)-1 is returned.
+Otherwise,
+the function returns the string length of the resulting punycode.
+.Pp
+If the return value is >=
+.Fa dstsize ,
+the output string has been truncated.
+.Pp
+If a given
+.Fa src
+string hasn't caused
+.Fn punyenc
+to return (size_t)-1 once,
+the same string will never return error.
+This is useful when retrying on truncation.
+.Sh EXAMPLES
+Proper usage of the function involves growing
+.Fa dst
+on truncation and only hard-erroring in case of irrecoverable failure.
+.Bd -literal -offset indent
+if ((ret = punyenc(dst, src, dstsize)) == (size_t)-1) {
+	errx(1, "punyenc: irrecoverable encoding error");
+} else if (ret >= dstsize) {
+	dstsize = ret+1; /* Space for the '\\0' terminator. */
+	if ((tmp = realloc(dst, dstsize)) == NULL)
+		err(1, "realloc");
+	dst = tmp;
+	(void)punyenc(dst, src, dstsize); /* Can't fail. */
+}
+.Ed
+.Sh STANDARDS
+RFC 3492: Punycode: A Bootstring encoding of Unicode
+.Sh AUTHORS
+.An -nosplit
+.An Guilherme Janczak Aq Mt guilherme.janczak@yandex.com .
+.Pp
+This punycode implementation features code from punycode-sample.c 2.0.0
+written by
+.An Adam M. Costello .
+.Sh SEE ALSO
+.Xr strlcpy 3
+.\" punydec 3

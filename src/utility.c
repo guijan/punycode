@@ -51,12 +51,11 @@ main(void)
 			*tmp = '\0';
 
 		/* Encode the line. */
-		if ((ret = punyenc(output, input, outlen)) >= outlen) {
-			if (ret == (size_t)-1) {
-				warnx("%s", "punyenc overflow");
-				rval = 1;
-				continue;
-			}
+		if ((ret = punyenc(output, input, outlen)) == (size_t)-1) {
+			warnx("%s", "punyenc: irrecoverable encoding error ");
+			rval = 1;
+			continue;
+		} else if (ret >= outlen) {
 			/* output wasn't large enough, resize it. */
 			outlen = ret+1;
 			tmp = realloc(output, outlen);

@@ -14,19 +14,33 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#if !defined(H_PUNYCODE)
-#define H_PUNYCODE
+#if !defined(H_PUNYTEST)
+#define H_PUNYTEST
 
 #include <stddef.h>
 
-#if defined(__cplusplus)
-extern "C" {
+/* Buffers of this size can contain any punycode input or output string used in
+ * our tests.
+ */
+enum {PUNYBUFSZ = 256};
+
+extern const struct punytest {
+	/* Input for the punycode encoder, not case folded. */
+	char *input;
+	/* Expected output of the punycode encoder, not case folded. */
+	char *output;
+} teststr[];
+
+extern const struct punytest_ux {
+	/*
+	 * Input for the punycode encoder, using the U+XXXX notation from the
+	 * Unicode standard and the Punycode RFC.
+	 */
+	char *input_ux;
+	/* Expected output of the punycode encoder. */
+	char *output;
+} teststr_ux[];
+
+size_t uxtostr(char *, const char [static 1], size_t);
+
 #endif
-
-size_t punyenc(char *, const char *, size_t);
-
-#if defined(__cplusplus)
-}
-#endif
-
-#endif /* !defined(H_PUNYCODE) */

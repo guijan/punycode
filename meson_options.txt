@@ -13,4 +13,13 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 option('utility', type: 'boolean', value: true,
-       description: 'Install a punycode shell utility.')
+       description: 'Compile and install a punycode shell utility.')
+option('tests', type: 'boolean', value: true,
+       description: 'Compile tests.')
+
+
+option('pkg_paths', type: 'array',
+       description: 'The 1st member of the array is the package library path.'
+                    + ' The 2nd is the package include path.'
+                    + ' The build definitions try to get it right by default,'
+                    + ' but it\'s not always possible.')

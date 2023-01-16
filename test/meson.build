@@ -12,4 +12,16 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-test('encoder', executable('encoder', 'encoder.c', dependencies: deps))
+if not get_option('tests')
+  subdir_done()
+endif
+
+if get_option('utility')
+  test('utility', executable('utility', 'utility.c', 'punytest.c',
+                             dependencies: [libbsd_dep]),
+                  args: utility)
+endif
+
+test('encoder', executable('encoder', 'encoder.c', 'punytest.c',
+                           dependencies: [libbsd_dep, libpunycode_dep]))
+

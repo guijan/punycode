@@ -21,11 +21,12 @@ project('punycode', 'c', version: '0.1', license: 'ISC',
 
 add_global_arguments('-D_GNU_SOURCE', language: 'c')
 
-libpunycode = library('punycode', 'src/punycode.c',
+libpunycode = library('punycode', 'src/libpunycode.c',
                       install: true)
 incdir = include_directories('src')
 libpunycode_dep = declare_dependency(link_with: libpunycode,
                                      include_directories: incdir)
+install_man('src/punycode.3')
 
 pkg = import('pkgconfig')
 pkg.generate(libpunycode,
@@ -42,6 +43,7 @@ cc = meson.get_compiler('c')
 funcs = {
   'err': '#include <err.h>',
   'errx': '#include <err.h>',
+  'getprogname': '#include <stdlib.h>',
   'warnx': '#include <err.h>',
 }
 libbsd_dep = []
@@ -72,11 +74,13 @@ if get_option('utility')
     include_directories: pkgpaths[1]
   )
 
-  utility = executable(
-    'punycode', 'src/utility.c',
+  punycode_exe = executable(
+    'punycode', 'src/punycode.c',
     dependencies: [libbsd_dep, libpunycode_dep, libunistring_dep],
     install: true
   )
+
+  install_man('src/punycode.1')
 endif
 
 subdir('test')

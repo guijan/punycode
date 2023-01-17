@@ -25,24 +25,40 @@ The shell utility and the tests can be disabled:
 ```console
 $ meson setup build -Dutility=false -Dtests=false
 ```
+This removes the need for their dependencies.
 
 If you have issues finding libunistring, specify the package library and include
 paths manually:
 ```console
 $ meson setup build "-Dpkg_paths=['/usr/local/lib', '/usr/local/include']"
 ```
-Replace /usr/local/lib and /usr/local/include with paths appropriate for your
-system.
+Replace _/usr/local/lib_ and _/usr/local/include_ with paths appropriate for
+your system.
 
-### Programming
+### Library
 In your build system, tell [pkgconf](https://github.com/pkgconf/pkgconf) to look
 for __libpunycode__. This is the only supported method of linking against the
 library and providing its include path.
 
-In your C or C++ program, follow [the manual](src/punycode.3).
+In your C or C++ program, follow the [library manual](src/punycode.3).
 
 If you desire more complete example code, read the source of the utility at
-[src/utility.c](src/utility.c).
+[src/punycode.c](src/punycode.c).
+
+You can also integrate the library into your source tree; for that,
+copypaste [src/libpunycode.c](src/libpunycode.c) and
+[src/punycode.h](src/punycode.h) into your program.
+They were written with standalone usage in mind.
+
+### Utility
+The utility is a filter:
+```console
+$ echo dog | build/punycode
+dog-
+$ echo Leoš Janáček | build/punycode
+leo janek-61a89bk6a
+```
+Usage information is present in the [utility manual](src/punycode.1).
 
 ## Development
 ### API design
@@ -58,15 +74,15 @@ C strings and requires that the length of the source string be passed explicitly
 through an argument, this implementation does what you'd expect for a C function
 that takes an input string and writes an output string.
 
-Read the manual and then the source code for in-depth information about the
+Read the manuals and the source code for in-depth information about the
 design and implementation of this punycode codec.
 
 ### Source code structure
-[src/punycode.c](src/punycode.c) and [src/punycode.h](src/punycode.h) contain
-the encoder and are intended to be usable standalone. They are intended to be
-maximally compatible, written in pure C99, and make no assumptions about the
-underlying machine and operating system, the assumptions we do not make include
-but are not limited to the source or execution character sets (although
+[src/libpunycode.c](src/libpunycode.c) and [src/punycode.h](src/punycode.h)
+contain the encoder and are intended to be usable standalone. They are intended
+to be maximally compatible, written in pure C99, and make no assumptions about
+the underlying machine and operating system, the assumptions we do not make
+include but are not limited to the source or execution character sets (although
 input/output are UTF-8) or the size of `int`.
 
 [spec/](spec/) contains the specification and the reference implementation,

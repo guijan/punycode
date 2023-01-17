@@ -16,12 +16,23 @@ if not get_option('tests')
   subdir_done()
 endif
 
-if get_option('utility')
-  test('utility', executable('utility', 'utility.c', 'punytest.c',
-                             dependencies: [libbsd_dep]),
-                  args: utility)
-endif
-
-test('encoder', executable('encoder', 'encoder.c', 'punytest.c',
+test('libpunycode', executable('codec', 'libpunycode.c', 'punytest.c',
                            dependencies: [libbsd_dep, libpunycode_dep]))
 
+
+if get_option('utility')
+  # Test the encoder inside the utility
+  test('punycode', executable('utility', 'punycode.c', 'punytest.c',
+                             dependencies: [libbsd_dep]),
+                  args: punycode_exe)
+
+  # Test the option parsing in the utility.
+  test('punycode - extraneous argument', punycode_exe, args: 'extraneous',
+       should_fail: true)
+  test('punycode - invalid option', punycode_exe, args: '-Z',
+       should_fail: true)
+  test('punycode - bad suboption 1', punycode_exe, args: '-Dunbuffered=',
+       should_fail: true)
+  test('punycode - bad suboption 2', punycode_exe, args: '-Dunbuffered=bad',
+       should_fail: true)
+endif

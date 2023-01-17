@@ -14,209 +14,173 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*
- * This punycode implementation features code from punycode-sample.c 2.0.0
- * written by Adam M. Costello. Specifically, it was taken from:
- * http://www.nicemice.net/idn/punycode-spec.gz
- * SHA256: 693158e1c1ada679c4cc9d72f48527a4490bb24ae81c3869a54889a0fdd58b0c
- *
- * I have not actually authored the encoder, only restyled and modified the
- * code. This derivative work is distributed under a different license, which is
- * explicitly allowed by the original's license.
- */
-
-#include <limits.h>
-#include <stdint.h>
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-#include "punycode.h"
+#include <punycode.h>
+#include <unicase.h>
+#include <uninorm.h>
 
-enum {
-	/* Punycode params. */
-	base		= 36,
-	tmin		= 1,
-	tmax		= 26,
-	skew		= 38,
-	damp		= 700,
-	initial_bias	= 72,
-	initial_n	= 128,
-};
+static int punyutil(void);
 
-static int utf8dec_unsafe(uint_least32_t *, void *);
-static unsigned char encode_digit(uint_least32_t);
-static uint_least32_t adapt(uint_least32_t, uint_least32_t, int);
-
-/* punyenc: punycode encoder
- * Encodes at most dstlen-1 bytes to _dst, terminating _dst with '\0' if
- * dstlen > 0. Returns the total length of the string it tried to create if the
- * input wasn't too long, (size_t)-1 otherwise.
+/* punyenc: command line front-end to my punycode encoder.
  *
- * Set _dst to NULL and dstlen to 0 to get the return value without writing
- * anything.
- *
- * No validation is done. Don't pass invalid UTF-8 input to the encoder.
- *
- * This interface is modeled after strlcpy(). The usage is the exact same,
- * except for the possible (size_t)-1 return value which indicates that the
- * input was too large to be encodable.
+ * This program reads UTF-8 lines from stdin, punyencodes them, and
+ * prints US-ASCII to stdout.
  */
-size_t
-punyenc(char *_dst, const char _src[static 1], size_t dstsize)
+int
+main(int argc, char *argv[])
 {
-	size_t i;
-	uint_least32_t k;
-	unsigned char *src = (unsigned char *)_src;
-	unsigned char *p;
-	unsigned char *dst = (unsigned char *)_dst;
-	uint_least32_t h, b;
-	uint_least32_t n;
-	uint_least32_t delta;
-	uint_least32_t bias;
-	uint_least32_t m;
-	uint_least32_t codepoint;
-	uint_least32_t srclen;
+	int c;
+	char *options;
+	extern char *optarg;
+	enum {UNBUFFERED};
+	char *tokens[] = {
+		[UNBUFFERED] = "unbuffered",
+		NULL
+	};
+	char *value;
 	int ret;
-	size_t rval = -1;
 
-	/* First, copy the basic chars. */
-	n = initial_n;
-	srclen = i = 0;
-	for (p = src; *p != '\0'; p += ret) {
-		ret = utf8dec_unsafe(&codepoint, p);
-		srclen++;
-		if (codepoint < n) {
-			/*
-			 * The code reads: If dst is large enough, write the
-			 * punycode and calculate its strlen(), otherwise, only
-			 * calculate its strlen().
-			 *
-			 * The following 3 lines of code are used every time we
-			 * write to dst.
-			 */
-			if (i < dstsize)
-				dst[i] = *p;
-			i++;
-		}
-	}
-	h = b = i;
-	if (i > 0) {
-		if (i < dstsize)
-			dst[i] = '-';
-		i++;
-	}
+#if defined(__OpenBSD__)
+	if (pledge("stdio", NULL) == -1)
+		err(1, "pledge");
+#endif
 
-	delta = 0;
-	bias = initial_bias;
-	while (h < srclen) {
-		uint_least32_t left, right, result;
-		for (m = UINT_LEAST32_MAX, p = src; *p != '\0';) {
-			p += utf8dec_unsafe(&codepoint, p);
-			if (codepoint >= n && codepoint < m)
-				m = codepoint;
-		}
-		left = m - n;
-		right = h + 1;
-		result = left * right;
-		if (left != 0 && result / left != right)
-			goto end; /* Overflow. */
-		delta += result;
-		n = m;
-
-		for (p = src; *p != '\0';) {
-			p += utf8dec_unsafe(&codepoint, p);
-			if (codepoint < n && ++delta == 0)
-				goto end; /* Overflow. */
-			if (codepoint == n) {
-				uint_least32_t q, t;
-				for (q = delta, k = base;; k += base) {
-					t = k <= bias ? tmin :
-					    k >= bias + tmax ? tmax : k - bias;
-					if (q < t)
-						break;
-					if (i < dstsize) {
-						dst[i] = encode_digit(
-						    t + (q - t) % (base - t));
+	while ((c = getopt(argc, argv, "D:")) != -1) {
+		switch (c) {
+		case 'D': /* Secret debug options. Not for users. */
+			options = optarg;
+			while (*options) {
+				switch (getsubopt(&options, tokens, &value)) {
+				case UNBUFFERED:
+					/* Disable buffering to prevent the test
+					 * rig from blocking forever as it waits
+					 * for a write that never flushes.
+					 */
+					ret = setvbuf(stdin, NULL, _IONBF, 0);
+					if (ret)
+						err(1, "setvbuf(stdin)");
+					ret = setvbuf(stdout, NULL, _IONBF, 0);
+					if (ret)
+						err(1, "setvbuf(stdout)");
+					if (value) {
+						errx(1,
+						    "option -D: suboption"
+	   					    " 'unbuffered' takes no"
+	   					    " argument");
 					}
-					i++;
-					q = (q - t) / (base - t);
-				}
-
-				if (i < dstsize)
-					dst[i] = encode_digit(q);
-				i++;
-				bias = adapt(delta, h + 1, h == b);
-				delta = 0;
-				h++;
+					break;
+				case -1:
+					errx(1, "option -D: missing or illegal"
+					    " suboption");
+	   				break;
+		   		}
+	    		}
+			break;
+		default:
+			exit(1);
+		}
+	}
+	argv += optind;
+	if (*argv != NULL) {
+		fprintf(stderr, "%s: extraneous non-option argument%s: ",
+	  		getprogname(), argv[1] == NULL ? "" : "s");
+		for (;;) {
+			fprintf(stderr, "'%s'", *argv);
+			if (*++argv == NULL) {
+				putc('\n', stderr);
+				break;
+			} else {
+				putc(' ', stderr);
 			}
 		}
-		delta++;
-		n++;
+		exit(1);
 	}
-	rval = i;
-end:
-	/* Make sure we don't i++ here to mirror strlcpy() behavior. */
-	if (i < dstsize)
-		dst[i] = '\0';
-	else if (dstsize > 0)
-		dst[dstsize-1] = '\0';
-	return rval;
+
+	return punyutil();
 }
 
-/* utf8dec_unsafe: decode utf8, assuming it is valid.
- *
- * Puts the codepoint in *codepoint.
- * Returns the amount of bytes in the utf-8 encoding.
- */
 static int
-utf8dec_unsafe(uint_least32_t *codepoint, void *_str)
+punyutil(void)
 {
-	unsigned char *str = _str;
-	int len;
-	int i;
+	ssize_t inlen;
+	char *in;
+	char *fold;
+	char *out;
+	size_t insz;
+	size_t foldsz;
+	size_t outsz;
+	int rval = 0;
+	void *tmp;
+	size_t foldlen;
+	size_t outlen;
 
-	if (*str < 0x80) {
-		*codepoint = *str;
-		return 1;
-	} else if (*str < 0xE0) {
-		len = 2;
-	} else if (*str < 0xF0) {
-		len = 3;
-	} else {
-		len = 4;
-	}
+	in = fold = out = NULL;
+	insz = foldsz = outsz = 0;
+	for (;;) {
+		/* Read a line. */
+		if ((inlen = getline(&in, &insz, stdin)) == -1) {
+			if (feof(stdin))
+				return rval;
+			err(1, "getline");
+		}
 
-	*codepoint = *str & (0x7F >> len);
-	i = 1;
-	do {
 		/*
-		 * Return if we run into a '\0' because the UTF-8 stream is
-		 * corrupted. This turns UB (buffer overread) into garbage in,
-		 * garbage out.
+		 * Canonicalize and fold the case of the line.
+		 *
+		 * u8_tolower() receives the size of the buffer fold points to
+		 * in its last parameter, and returns the length of the string
+		 * it created in the same parameter. We keep track of
+		 * these separately.
 		 */
-		if (str[i] == '\0')
-			return i;
-		*codepoint <<= 6;
-		*codepoint |= str[i] & 0x3F;
-	} while (++i < len);
-	return len;
-}
+		foldlen = foldsz;
+		tmp = u8_tolower(in, inlen, NULL, UNINORM_NFC, fold, &foldlen);
+		if (tmp == NULL)
+			err(1, "u8_tolower");
+		if (tmp != fold) {
+			/*
+			 * u8_tolower() allocated a new buffer because fold
+			 * wasn't large enough.
+			 */
+			free(fold);
+			fold = tmp;
+			/*
+			 * The sz of this new buffer matches the len of the
+			 * string inside it.
+			 */
+			foldsz = foldlen;
+		}
+		/*
+		 * unistring braindamage: u8_tolower does not '\0' terminate.
+		 * That's okay, we just need to overwrite the newline that we
+		 * left at the end of the string with a '\0'.
+		 */
+		fold[--foldlen] = '\0';
 
-static unsigned char
-encode_digit(uint_least32_t d)
-{
-	return d + 22 + 75 * (d < 26);
-}
 
-static uint_least32_t
-adapt(uint_least32_t delta, uint_least32_t numpoints, int firsttime)
-{
-	uint_least32_t k;
+		/* Encode the line. */
+		if ((outlen = punyenc(out, fold, outsz)) == (size_t)-1) {
+			warnx("%s", "punyenc: irrecoverable encoding error");
+			rval = 1;
+			continue;
+		} else if (outlen >= outsz) {
+			/* output wasn't large enough, resize it. */
+			outsz = outlen+1;
+			if ((tmp = realloc(out, outsz)) == NULL)
+				err(1, "realloc");
+			out = tmp;
 
-	delta = firsttime ? delta / damp : delta / 2;
-	delta += delta / numpoints;
+			(void)punyenc(out, fold, outsz);
+		}
+		/* Use the '\0' terminator's storage to store a newline. */
+		out[outlen++] = '\n';
 
-	for (k = 0; delta > ((base - tmin) * tmax) / 2; k += base)
-		delta /= base - tmin;
-
-	return k + (base - tmin + 1) * delta / (delta + skew);
+		if (fwrite(out, 1, outlen, stdout) < outlen)
+			err(1, "fwrite");
+	}
+	/* NOTREACHED */
 }

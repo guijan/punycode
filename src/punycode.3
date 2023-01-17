@@ -18,7 +18,7 @@
 .Dt PUNYENC 3
 .Os
 .Sh NAME
-.Nm punyenc
+.Nm punycode, punyenc
 .Nd punycode encoder
 .Sh SYNOPSIS
 .In punycode.h
@@ -78,6 +78,9 @@ if ((ret = punyenc(dst, src, dstsize)) == (size_t)-1) {
 	(void)punyenc(dst, src, dstsize); /* Can't fail. */
 }
 .Ed
+.Sh SEE ALSO
+.Xr strlcpy 3
+.\" punydec 3
 .Sh STANDARDS
 RFC 3492: Punycode: A Bootstring encoding of Unicode
 .Sh AUTHORS
@@ -87,6 +90,3 @@ RFC 3492: Punycode: A Bootstring encoding of Unicode
 This punycode implementation features code from punycode-sample.c 2.0.0
 written by
 .An Adam M. Costello .
-.Sh SEE ALSO
-.Xr strlcpy 3
-.\" punydec 3

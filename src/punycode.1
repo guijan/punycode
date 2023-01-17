@@ -1,0 +1,49 @@
+.\"	$OpenBSD: mdoc.template,v 1.15 2014/03/31 00:09:54 dlg Exp $
+.\"
+.\" Copyright (c) 2023 Guilherme Janczak <guilherme.janczak@yandex.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: January 17 2023 $
+.Dt PUNYCODE 1
+.Os
+.Sh NAME
+.Nm punycode
+.Nd encode punycode
+.Sh SYNOPSIS
+.Nm punycode
+.Sh DESCRIPTION
+The
+.Nm
+utility receives UTF-8 from stdin, and prints US-ASCII punycode to stdout.
+.Sh EXIT STATUS
+.Ex -std punycode
+.Sh EXAMPLES
+.Bd -literal
+$ echo Leoš Janáček | punycode
+leo janek-61a89bk6a
+$ punycode
+風物詩
+g2xy52ct7j
+Cão
+co-sia
+.Ed
+.Sh STANDARDS
+RFC 3492: Punycode: A Bootstring encoding of Unicode
+.Sh AUTHORS
+.An -nosplit
+.An Guilherme Janczak Aq Mt guilherme.janczak@yandex.com .
+.Pp
+This punycode implementation features code from punycode-sample.c 2.0.0
+written by
+.An Adam M. Costello .

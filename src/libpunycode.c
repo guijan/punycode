@@ -42,7 +42,8 @@ enum {
 	initial_n	= 128,
 };
 
-static int utf8dec_unsafe(uint_least32_t *, void *);
+static int utf8dec_unsafe(uint_least32_t [restrict static 1],
+    const char [restrict static 1]);
 static unsigned char encode_digit(uint_least32_t);
 static uint_least32_t adapt(uint_least32_t, uint_least32_t, int);
 
@@ -61,7 +62,8 @@ static uint_least32_t adapt(uint_least32_t, uint_least32_t, int);
  * input was too large to be encodable.
  */
 size_t
-punyenc(char *_dst, const char _src[static 1], size_t dstsize)
+punyenc(char *restrict _dst, const char _src[restrict static 1],
+    size_t dstsize)
 {
 	size_t i;
 	uint_least32_t k;
@@ -167,10 +169,10 @@ end:
  * Puts the codepoint in *codepoint.
  * Returns the amount of bytes in the utf-8 encoding.
  */
-static int
-utf8dec_unsafe(uint_least32_t *codepoint, void *_str)
+static int utf8dec_unsafe(uint_least32_t codepoint[restrict static 1],
+    const char _str[restrict static 1])
 {
-	unsigned char *str = _str;
+	const unsigned char *str = _str;
 	int len;
 	int i;
 

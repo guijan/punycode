@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-size_t punyenc(char *, const char *, size_t);
+size_t punyenc(char [restrict], const char [restrict static 1], size_t);
 
 #if defined(__cplusplus)
 }

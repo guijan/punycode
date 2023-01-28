@@ -23,7 +23,7 @@
 .Sh SYNOPSIS
 .In punycode.h
 .Ft size_t
-.Fn punyenc "char *dst" "const char *src" "size_t dstsize"
+.Fn punyenc "char *restrict dst" "const char src[restrict static 1]" "size_t dstsize"
 .Sh DESCRIPTION
 The
 .Fn punyenc

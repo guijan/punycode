@@ -20,10 +20,14 @@
 #include <stddef.h>
 
 #if defined(__cplusplus)
+#define PUNYCODE_RESTRICT
 extern "C" {
+#else
+#define PUNYCODE_RESTRICT restrict
 #endif
 
-size_t punyenc(char [restrict], const char [restrict static 1], size_t);
+size_t punyenc(char [PUNYCODE_RESTRICT],
+    const char [PUNYCODE_RESTRICT static 1], size_t);
 
 #if defined(__cplusplus)
 }
